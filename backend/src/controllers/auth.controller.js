@@ -18,8 +18,12 @@ export const signup = async (req,res)=>{
         if(user) return res.status(400).json({message:"User already Exists"});
 
 
+        // hashing the password 
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password,salt);
+
+
+        // new user created throught User model from db
 
         const newUser = new User({
             fullName,
@@ -32,7 +36,7 @@ export const signup = async (req,res)=>{
             genrateToken(newUser._id,res)
             await newUser.save();
 
-            res.status(201).json({
+            res.status(200).json({
                 _id:newUser._id,
                 fullName:newUser.fullName,
                 email:newUser.email,
@@ -50,10 +54,43 @@ export const signup = async (req,res)=>{
     }
 }
 
-export const login = (req,res)=>{
-    res.send("login");
+export const login =  async (req,res)=>{
+    const {email,password}=req.body
+
+    try{
+        const user = await User.findOne({email})
+
+        if(!user){
+            return res.status(400).json({message:"Invalid Credentials"})
+        }
+
+        const ispass=await bcrypt.compare(password,user.password)
+
+        if(!ispass){
+            return res.status(400).json({message:"Invalid Credentials"})
+        }
+        genrateToken(user._id,res)
+
+        res.status(200).json({
+            _id:newUser._id,
+            fullName:newUser.fullName,
+            email:newUser.email,
+            profilePic:newUser.profilePic,
+        });
+    }
+    catch(error){
+        console.log("Error in login Controller",error.message);
+        res.status(500).json({message:"Internal Server Error"});
+    }
+
 }
 
 export const logout = (req,res)=>{
-    res.send("logout");
+    try {
+        res.cookie("jwt","",{maxAge:0})
+        res.status(200).json({message:"logged out succesfully"})
+    } catch (error) {
+        console.log("error in logout controller",error.message);
+        res.status(500).json({message:"Internal Server Error"})
+    }
 }
