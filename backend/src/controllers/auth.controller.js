@@ -73,10 +73,10 @@ export const login =  async (req,res)=>{
         genrateToken(user._id,res)
 
         res.status(200).json({
-            _id:newUser._id,
-            fullName:newUser.fullName,
-            email:newUser.email,
-            profilePic:newUser.profilePic,
+            _id:user._id,
+            fullName:user.fullName,
+            email:user.email,
+            profilePic:user.profilePic,
         });
     }
     catch(error){
@@ -97,39 +97,70 @@ export const logout = (req,res)=>{
 }
 
 export const updateProfile = async (req, res) => {
-    try {
-        // getting pic from user 
-        const { profilePic } = req.body;
+  try {
+    const { profilePic } = req.body;
 
-        // validating input
-        if (!profilePic) {
-            return res.status(400).json({ message: "Profile Pic Required" });
-        }
+    // Log incoming base64 (first 100 characters for preview)
+    console.log("Incoming Base64:", profilePic.slice(0, 100));
 
-        // check if user is authenticated and exists
-        if (!req.User || !req.User._id) {
-            return res.status(401).json({ message: "Unauthorized" });
-        }
-
-        const userId = req.User._id;
-
-        // storing in cloudinary bucket 
-        const uploadResponse = await cloudinary.uploader.upload(profilePic);
-
-        // updating db with updated pic 
-        const updatedUser = await User.findByIdAndUpdate(
-            userId,
-            { profilePic: uploadResponse.secure_url },
-            { new: true }
-        );
-
-        res.status(200).json(updatedUser);
-
-    } catch (error) {
-        console.error("Error in update profile:", error);
-        return res.status(500).json({ message: "Internal server error" });
+    // Validate if profilePic is provided
+    if (!profilePic) {
+      return res.status(400).json({ message: "Profile Pic Required" });
     }
-}
+
+    // Check if the user is authenticated
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const userId = req.user._id; // Use req.user instead of req.User
+
+    // Add the prefix to the base64 string (if not already present)
+    let fullBase64 = profilePic;
+    if (!fullBase64.startsWith("data:image/jpeg;base64,")) {
+      fullBase64 = `data:image/jpeg;base64,${profilePic}`;
+    }
+
+    console.log("Uploading to Cloudinary with base64:", fullBase64.slice(0, 100)); // Log first 100 characters for debugging
+
+    // Upload image to Cloudinary
+    const uploadResponse = await cloudinary.uploader.upload(fullBase64);
+
+    // Check if upload is successful
+    if (!uploadResponse || !uploadResponse.secure_url) {
+      console.error("Cloudinary upload failed. Response:", uploadResponse);
+      return res.status(500).json({ message: "Image upload failed" });
+    }
+
+    console.log("Cloudinary Upload Success:", uploadResponse.secure_url);
+
+    // Update the user's profile in the database
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { profilePic: uploadResponse.secure_url },
+      { new: true }
+    );
+
+    // Check if the user update was successful
+    if (!updatedUser) {
+      console.error("User update failed. User not found or error in DB.");
+      return res.status(500).json({ message: "Database update failed" });
+    }
+
+    console.log("Updated user:", updatedUser);
+
+    // Return updated user data
+    res.status(200).json(updatedUser);
+
+  } catch (error) {
+    console.error("Error in update profile:", error.message);
+    console.error("Full error object:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+
+
 
 export const checkAuth = (req,res)=>{
     try {
