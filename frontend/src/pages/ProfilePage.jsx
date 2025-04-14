@@ -15,15 +15,15 @@ const ProfilePage = () => {
     reader.readAsDataURL(file);
 
     reader.onload = async () => {
-      // This is the full base64 string, including the prefix
+      
       let base64Image = reader.result;
 
-      // Remove the 'data:image/jpeg;base64,' part (base64 prefix)
+      
       base64Image = base64Image.replace(/^data:image\/\w+;base64,/, "");
 
-      setSelectedImg(reader.result);  // This can still be used for preview if needed
+      setSelectedImg(reader.result);  
 
-      // Send the cleaned base64 image data to the backend
+      
       await updateProfile({ profilePic: base64Image });
     };
   };
