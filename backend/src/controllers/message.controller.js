@@ -22,8 +22,6 @@ export const getMessages = async (req,res)=>{
     try {
         const {id:userToChatId}=req.params
         const myId=req.user._id;
-
-
         // find all the messages between sender and reciver
         const messages = await Message.find({
             $or:[
@@ -33,10 +31,10 @@ export const getMessages = async (req,res)=>{
                 {
                     senderId:userToChatId,receiverId:myId
                 }
-            ]
+            ],
         });
 
-        res.status(400).json(messages);
+        res.status(200).json(messages);
     } catch (error) {
         console.log("error in getMessages:",error);
         return res.status(500).json({message:"Internal Server Error"});
